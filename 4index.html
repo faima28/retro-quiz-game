@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Retro Quiz Game</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    body {
+      font-family: 'Press Start 2P', cursive;
+      text-align: center;
+      background: #3399ff; /* خلفية زرقاء */
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+    }
+
+    .hearts {
+      font-size: 20px;
+      color: red;
+    }
+
+    .timer {
+      font-size: 18px;
+      margin-top: 10px;
+      color: yellow;
+    }
+
+    .question {
+      margin: 20px;
+      font-size: 16px;
+      background: rgba(0,0,0,0.6);
+      padding: 15px;
+      border: 3px solid #fff;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .options button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 14px;
+      background: #ffcc00;
+      border: 3px solid #000;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .options button:hover {
+      background: #ff9900;
+    }
+
+    .restart button {
+      margin-top: 20px;
+      padding: 10px;
+      font-size: 14px;
+      background: #00cc66;
+      border: 3px solid #000;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .restart button:hover {
+      background: #00994d;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎮 Retro Crash Quiz</h1>
+    <div id="hearts" class="hearts">❤️❤️❤️</div>
+    <div id="timer" class="timer"></div>
+  </header>
+
+  <div id="game"></div>
+
+  <!-- Sound effects -->
+  <audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+  <audio id="bossSound" src="https://actions.google.com/sounds/v1/cartoon/metal_clank.ogg"></audio>
+  <audio id="victorySound" src="https://actions.google.com/sounds/v1/cartoon/descending_whistle.ogg"></audio>
+
+  <script>
+    const level1 = [
+      {q:"Which console dominated the early 1980s?", options:["Nintendo NES","Atari 2600","Sega Genesis","Xbox"], answer:1},
+      {q:"Atari paid how much for E.T. rights?", options:["$5 million","$10 million","$20–25 million","$50 million"], answer:2},
+      {q:"What was wrong with the E.T. game?", options:["Too expensive","Confusing and low-quality","Only in Japan","Required internet"], answer:1}
+    ];
+
+    const level2 = [
+      {q:"Which year did the crash happen?", options:["1980","1983","1985","1990"], answer:1},
+      {q:"Which company later revived the market?", options:["Sony","Nintendo","Microsoft","Sega"], answer:1},
+      {q:"What symbolized oversaturation of games?", options:["Too many consoles","Too many low-quality titles","Too few players","Too many accessories"], answer:1}
+    ];
+
+    const bossRound = {
+      q:"Boss Round: What was the MAIN reason for the 1983 crash?",
+      options:["Too many low-quality games","High prices only","Lack of consoles","Players stopped liking games"],
+      answer:0
+    };
+
+    let score = 0, hearts = 3, current = 0, stage = 1;
+    let timerInterval, timeLeft = 10;
+    const gameDiv = document.getElementById("game");
+    const heartsDiv = document.getElementById("hearts");
+    const timerDiv = document.getElementById("timer");
+    const correctSound = document.getElementById("correctSound");
+    const wrongSound = document.getElementById("wrongSound");
+    const bossSound = document.getElementById("bossSound");
+    const victorySound = document.getElementById("victorySound");
+
+    function updateHearts() {
+      heartsDiv.innerHTML = "❤️".repeat(hearts);
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 10;
+      timerDiv.innerHTML = "⏱ Time left: " + timeLeft + "s";
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDiv.innerHTML = "⏱ Time left: " + timeLeft + "s";
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          hearts--;
+          wrongSound.play();
+          alert("⏰ Time's up! You lost a heart 💔");
+          current++;
+          showQuestion();
+        }
+      }, 1000);
+    }
+
+    function showQuestion() {
+      updateHearts();
+      let questions = stage === 1 ? level1 : stage === 2 ? level2 : [];
+      if (current >= questions.length || hearts <= 0) {
+        clearInterval(timerInterval);
+        if (hearts > 0) {
+          if (stage === 1) {
+            alert("🌟 Level 1 Complete! Great job, keep going!");
+            stage = 2; current = 0; showQuestion(); return;
+          } else if (stage === 2) {
+            alert("🚀 Level 2 Complete! You are unstoppable!");
+            bossSound.play();
+            const q = bossRound;
+            gameDiv.innerHTML = `<h2>🔥 ${q.q}</h2>
+              <div class="options">${q.options.map((opt,i)=>`<button onclick="checkBoss(${i})">${opt}</button>`).join("")}</div>`;
+            startTimer();
+            return;
+          }
+        } else {
+          gameDiv.innerHTML = `<h2>💔 Game Over!</h2><p>You ran out of hearts.</p>` + restartButton();
+        }
+        return;
+      }
+      const q = questions[current];
+      gameDiv.innerHTML = `<div class="question">Level ${stage}: ${q.q}</div>
+        <div class="options">${q.options.map((opt,i)=>`<button onclick="checkAnswer(${i})">${opt}</button>`).join("")}</div>`;
+      startTimer();
+    }
+
+    function checkAnswer(choice) {
+      clearInterval(timerInterval);
+      let questions = stage === 1 ? level1 : stage === 2 ? level2 : [];
+      const q = questions[current];
+      if (choice === q.answer) {
+        score++;
+        correctSound.play();
+        alert("👏 Awesome! You nailed it!");
+      } else {
+        hearts--;
+        wrongSound.play();
+        alert("💪 Keep trying, you can do it!");
+      }
+      current++;
+      showQuestion();
+    }
+
+    function checkBoss(choice) {
+      clearInterval(timerInterval);
+      if (choice === bossRound.answer) {
+        score++;
+        victorySound.play();
+        gameDiv.innerHTML = `<h2>🏆 You defeated the Boss Round!</h2>
+          <p>Your final score: ${score}/${level1.length+level2.length+1}</p>
+          <p>🌟 Incredible! You are a true gaming historian!</p>` + restartButton();
+      } else {
+        hearts = 0;
+        wrongSound.play();
+        gameDiv.innerHTML = `<h2>💔 Boss defeated you!</h2>
+          <p>Final score: ${score}/${level1.length+level2.length+1}</p>
+          <p>🔥 Don't give up, heroes always rise again!</p>` + restartButton();
+      }
+      updateHearts();
+    }
+
+    function restartButton() {
+      return `<div class="restart"><button onclick="restartGame()">🔄 Restart Game</button></div>`;
+    }
+
+    function restartGame() {
+      score = 0; hearts = 3; current = 0; stage = 1;
+      showQuestion();
+    }
+
+    showQuestion();
+  </script>
+</body>
+</html>
